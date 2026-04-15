@@ -1,76 +1,68 @@
 require('dotenv').config();
-const { 
-  Client, 
-  GatewayIntentBits, 
-  Partials, 
-  Collection,
-  EmbedBuilder
-} = require('discord.js');
+
+const { Client, GatewayIntentBits, Collection } = require('discord.js');
 const mongoose = require('mongoose');
 const fs = require('fs');
+
+const cooldown = require('./utils/cooldown');
 
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
     GatewayIntentBits.GuildMessages,
-    GatewayIntentBits.MessageContent,
-    GatewayIntentBits.GuildMembers,
-    GatewayIntentBits.GuildVoiceStates
-  ],
-  partials: [Partials.Channel]
+    GatewayIntentBits.MessageContent
+  ]
 });
 
-// ================= COMMANDS =================
 client.commands = new Collection();
-
-const commandFiles = fs.readdirSync('./commands').filter(f => f.endsWith('.js'));
-
-for (const file of commandFiles) {
-  const cmd = require(`./commands/${file}`);
-  client.commands.set(cmd.name, cmd);
-
-  if (cmd.aliases) {
-    cmd.aliases.forEach(a => client.commands.set(a, cmd));
-  }
-}
-
-// ================= DATABASE =================
-mongoose.connect(process.env.MONGO_URI)
-  .then(() => console.log('✅ MongoDB Connected'))
-  .catch(err => console.log(err));
-
-// ================= READY =================
-client.on('ready', () => {
-  console.log(`🌙 ${client.user.tag} is online`);
-});
-
-// ================= PREFIX =================
 const prefix = ".";
 
-// ================= MESSAGE HANDLER =================
-client.on('messageCreate', async (message) => {
-  if (!message.guild || message.author.bot) return;
+// LOAD COMMANDS
+const commandFiles = fs.readdirSync('./commands').filter(file => file.endsWith('.js'));
 
-  if (!message.content.startsWith(prefix)) return;
+for (const file of commandFiles) {
+  const command = require(`./commands/${file}`);
+  client.commands.set(command.name, command);
+}
+
+// MONGODB
+mongoose.connect(process.env.MONGO_URI)
+  .then(() => console.log("MongoDB Connected"))
+  .catch(err => console.log(err));
+
+// READY
+client.once('ready', () => {
+  console.log(`${client.user.tag} is online`);
+});
+
+// MESSAGE HANDLER
+client.on('messageCreate', async message => {
+  if (!message.content.startsWith(prefix) || message.author.bot) return;
 
   const args = message.content.slice(prefix.length).trim().split(/ +/);
-  const cmdName = args.shift().toLowerCase();
+  const cmd = args.shift().toLowerCase();
 
-  const cmd = client.commands.get(cmdName);
-  if (!cmd) return;
+  const command = client.commands.get(cmd);
+  if (!command) return;
+
+  // COOLDOWN CHECK (default 3s)
+  const cd = cooldown(message, cmd, 3);
+  if (cd) return;
 
   try {
-    await cmd.execute(message, args, client);
+    command.execute(message, args);
   } catch (err) {
     console.error(err);
 
-    const embed = new EmbedBuilder()
-      .setTitle('<:error:1493997369505743000> Error')
-      .setDescription('Something went wrong while executing this command.')
-      .setColor('Red')
-      .setFooter({ text: `Requested by ${message.author.tag}` });
-
-    message.reply({ embeds: [embed] });
+    message.reply({
+      embeds: [
+        new (require('discord.js').EmbedBuilder)()
+          .setTitle('<:error:1493997369505743000> Error')
+          .setDescription('Something went wrong.')
+          .setColor('Red')
+          .setFooter({ text: `Requested by ${message.author.tag}` })
+      ]
+    });
   }
 });
 
