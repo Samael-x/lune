@@ -1,71 +1,43 @@
+const warnSchema = require('../models/warnSchema');
+const pagination = require('../utils/pagination');
 const { EmbedBuilder } = require('discord.js');
-const checkPerms = require('../utils/permissions');
-const Warn = require('../models/warnSchema');
-const logger = require('../utils/logger');
+const emoji = require('../utils/emoji');
 
 module.exports = {
   name: "warns",
 
-  async execute(message, args) {
-    if (!checkPerms(message)) return;
-
+  async execute(message) {
     const user = message.mentions.users.first();
+    if (!user) return;
 
-    if (!user) {
-      return message.reply({
-        embeds: [
-          new EmbedBuilder()
-            .setTitle('<:error:1493997369505743000> Error')
-            .setDescription('Please mention a user.')
-            .setColor('Red')
-            .setFooter({ text: `Requested by ${message.author.tag}` })
-        ]
-      });
-    }
-
-    const data = await Warn.findOne({
+    const data = await warnSchema.find({
       guildId: message.guild.id,
       userId: user.id
     });
 
-    if (!data || data.warns.length === 0) {
+    if (!data.length) {
       return message.reply({
-        embeds: [
-          new EmbedBuilder()
-            .setTitle('ℹ️ No Warns')
-            .setDescription('This user has no warns.')
-            .setColor('Blue')
-            .setFooter({ text: `Requested by ${message.author.tag}` })
-        ]
+        content: `${emoji.warning} No warnings`
       });
     }
 
-    // FORMAT WARNS
-    const warnList = data.warns
-      .map((w, i) => {
-        return `**${i + 1}.** <@${w.moderatorId}> → ${w.reason}`;
-      })
-      .join("\n");
+    const chunk = 5;
+    const pages = [];
 
-    const embed = new EmbedBuilder()
-      .setTitle('<:warning:149399724064486401> Warn History')
-      .setDescription(warnList)
-      .setColor('Yellow')
-      .setFooter({ text: `Total Warns: ${data.warns.length}` });
+    for (let i = 0; i < data.length; i += chunk) {
+      const current = data.slice(i, i + chunk);
 
-    await message.reply({ embeds: [embed] });
+      const embed = new EmbedBuilder()
+        .setTitle(`${emoji.warn} Warnings for ${user.username}`)
+        .setDescription(
+          current.map((w, i) => `**${i + 1}.** ${w.reason}`).join('\n')
+        )
+        .setColor('#FEE75C')
+        .setFooter({ text: `Page ${Math.floor(i / chunk) + 1}` });
 
-    // LOG
-    const logEmbed = new EmbedBuilder()
-      .setTitle('📜 Warn History Viewed')
-      .addFields(
-        { name: "Target", value: `<@${user.id}>`, inline: true },
-        { name: "Requested By", value: `<@${message.author.id}>`, inline: true },
-        { name: "Total Warns", value: `${data.warns.length}` }
-      )
-      .setColor('Blue')
-      .setTimestamp();
+      pages.push(embed);
+    }
 
-    await logger(message, logEmbed);
+    pagination(message, pages);
   }
 };
