@@ -1,147 +1,65 @@
 const {
-  EmbedBuilder,
   ActionRowBuilder,
-  StringSelectMenuBuilder,
-  ButtonBuilder,
-  ButtonStyle
+  StringSelectMenuBuilder
 } = require('discord.js');
+
+const embed = require('../utils/embed');
+const emoji = require('../utils/emoji');
 
 module.exports = {
   name: "help",
 
   async execute(message) {
+    const base = embed.info(
+      message,
+      "Help Panel",
+      "Select a category below"
+    );
 
-    // ================= MAIN EMBED =================
-    const mainEmbed = new EmbedBuilder()
-      .setTitle('<:home:1494006772921532567> Lune Help Panel')
-      .setDescription('Select a category below to view commands.')
-      .setColor('Blue')
-      .setFooter({ text: `Requested by ${message.author.tag}` });
-
-    // ================= DROPDOWN =================
-    const select = new StringSelectMenuBuilder()
-      .setCustomId('help_select')
-      .setPlaceholder('Select a category')
+    const menu = new StringSelectMenuBuilder()
+      .setCustomId('help_menu')
+      .setPlaceholder('Choose category')
       .addOptions([
         {
           label: 'Moderation',
           value: 'mod',
-          emoji: '<:mod:1493997355089793085>'
+          emoji: emoji.mod
         },
         {
           label: 'Utility',
-          value: 'utility',
-          emoji: '<:utility:1493997342733369435>'
-        },
-        {
-          label: 'Fun',
-          value: 'fun',
-          emoji: '<:games:1493997346244132894>'
+          value: 'util',
+          emoji: emoji.settings
         }
       ]);
 
-    const dropdownRow = new ActionRowBuilder().addComponents(select);
+    const row = new ActionRowBuilder().addComponents(menu);
 
-    // ================= BUTTONS =================
-    const buttons = new ActionRowBuilder().addComponents(
-      new ButtonBuilder()
-        .setCustomId('home')
-        .setLabel('Home')
-        .setStyle(ButtonStyle.Primary)
-        .setEmoji('<:home:1494006772921532567>'),
-
-      new ButtonBuilder()
-        .setCustomId('close')
-        .setLabel('Close')
-        .setStyle(ButtonStyle.Danger)
-        .setEmoji('<:close:1494006774968221858>')
-    );
-
-    // ================= SEND =================
     const msg = await message.reply({
-      embeds: [mainEmbed],
-      components: [dropdownRow, buttons]
+      embeds: [base],
+      components: [row]
     });
 
-    const collector = msg.createMessageComponentCollector({ time: 60000 });
+    const collector = msg.createMessageComponentCollector({ time: 0 });
 
-    collector.on('collect', async (interaction) => {
+    collector.on('collect', async i => {
+      if (i.user.id !== message.author.id)
+        return i.reply({ content: `${emoji.error} Not yours`, ephemeral: true });
 
-      if (interaction.user.id !== message.author.id) {
-        return interaction.reply({
-          content: "Not your menu",
-          ephemeral: true
+      if (i.values[0] === 'mod') {
+        return i.update({
+          embeds: [
+            embed.info(message, "Moderation", "`.warn`\n`.warns`\n`.setlog`")
+          ]
         });
       }
 
-      // ================= DROPDOWN =================
-      if (interaction.isStringSelectMenu()) {
-
-        // MOD
-        if (interaction.values[0] === 'mod') {
-          const modEmbed = new EmbedBuilder()
-            .setTitle('<:mod:1493997355089793085> Moderation Commands')
-            .setDescription(`
-⚠️ \`.warn @user reason\`
-🔨 \`.ban @user\`
-👢 \`.kick @user\`
-`)
-            .setColor('Blue');
-
-          return interaction.update({ embeds: [modEmbed] });
-        }
-
-        // UTILITY
-        if (interaction.values[0] === 'utility') {
-          const utilEmbed = new EmbedBuilder()
-            .setTitle('<:utility:1493997342733369435> Utility Commands')
-            .setDescription(`
-🖼️ \`.avatar / .av\`
-📜 \`.list roles\`
-📜 \`.list emojis\`
-📜 \`.list channels\`
-`)
-            .setColor('Blue');
-
-          return interaction.update({ embeds: [utilEmbed] });
-        }
-
-        // FUN
-        if (interaction.values[0] === 'fun') {
-          const funEmbed = new EmbedBuilder()
-            .setTitle('<:games:1493997346244132894> Fun Commands')
-            .setDescription(`
-🎮 \`.rps\`
-🎱 \`.8ball\`
-🎲 \`.random\`
-`)
-            .setColor('Blue');
-
-          return interaction.update({ embeds: [funEmbed] });
-        }
+      if (i.values[0] === 'util') {
+        return i.update({
+          embeds: [
+            embed.info(message, "Utility", "`.avatar`\n`.list`")
+          ]
+        });
       }
-
-      // ================= BUTTONS =================
-      if (interaction.isButton()) {
-
-        // HOME BUTTON
-        if (interaction.customId === 'home') {
-          return interaction.update({
-            embeds: [mainEmbed],
-            components: [dropdownRow, buttons]
-          });
-        }
-
-        // CLOSE BUTTON
-        if (interaction.customId === 'close') {
-          return interaction.update({
-            content: "Closed.",
-            embeds: [],
-            components: []
-          });
-        }
-      }
-
     });
   }
 };
