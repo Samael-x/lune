@@ -1,0 +1,14 @@
+{
+  "name": "lune",
+  "version": "1.0.0",
+  "description": "Lune Discord Bot",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "discord.js": "^14.14.1",
+    "mongoose": "^8.0.3",
+    "dotenv": "^16.4.5"
+  }
+}
