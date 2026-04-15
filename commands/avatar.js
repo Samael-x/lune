@@ -1,18 +1,20 @@
 const { EmbedBuilder } = require('discord.js');
+const emoji = require('../utils/emoji');
 
 module.exports = {
   name: "avatar",
-  aliases: ["av"],
 
   async execute(message) {
     const user = message.mentions.users.first() || message.author;
 
-    const embed = new EmbedBuilder()
-      .setTitle('<:avtar:1493997315814461550> Avatar')
-      .setImage(user.displayAvatarURL({ size: 1024 }))
-      .setColor('Blue')
-      .setFooter({ text: `Requested by ${message.author.tag}` });
-
-    message.reply({ embeds: [embed] });
+    message.reply({
+      embeds: [
+        new EmbedBuilder()
+          .setTitle(`${emoji.user} ${user.username}`)
+          .setImage(user.displayAvatarURL({ size: 1024 }))
+          .setColor('#5865F2')
+          .setFooter({ text: `Requested by ${message.author.tag}` })
+      ]
+    });
   }
 };
