@@ -1,6 +1,7 @@
 const { EmbedBuilder } = require('discord.js');
 const checkPerms = require('../utils/permissions');
 const Warn = require('../models/warnSchema');
+const logger = require('../utils/logger');
 
 module.exports = {
   name: "warns",
@@ -9,6 +10,7 @@ module.exports = {
     if (!checkPerms(message)) return;
 
     const user = message.mentions.users.first();
+
     if (!user) {
       return message.reply({
         embeds: [
@@ -16,6 +18,7 @@ module.exports = {
             .setTitle('<:error:1493997369505743000> Error')
             .setDescription('Please mention a user.')
             .setColor('Red')
+            .setFooter({ text: `Requested by ${message.author.tag}` })
         ]
       });
     }
@@ -29,14 +32,15 @@ module.exports = {
       return message.reply({
         embeds: [
           new EmbedBuilder()
-            .setTitle('<:info:14939973753565189813> No Warns')
+            .setTitle('ℹ️ No Warns')
             .setDescription('This user has no warns.')
             .setColor('Blue')
+            .setFooter({ text: `Requested by ${message.author.tag}` })
         ]
       });
     }
 
-    // ================= FORMAT WARNS =================
+    // FORMAT WARNS
     const warnList = data.warns
       .map((w, i) => {
         return `**${i + 1}.** <@${w.moderatorId}> → ${w.reason}`;
@@ -49,6 +53,19 @@ module.exports = {
       .setColor('Yellow')
       .setFooter({ text: `Total Warns: ${data.warns.length}` });
 
-    message.reply({ embeds: [embed] });
+    await message.reply({ embeds: [embed] });
+
+    // LOG
+    const logEmbed = new EmbedBuilder()
+      .setTitle('📜 Warn History Viewed')
+      .addFields(
+        { name: "Target", value: `<@${user.id}>`, inline: true },
+        { name: "Requested By", value: `<@${message.author.id}>`, inline: true },
+        { name: "Total Warns", value: `${data.warns.length}` }
+      )
+      .setColor('Blue')
+      .setTimestamp();
+
+    await logger(message, logEmbed);
   }
 };
