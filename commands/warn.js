@@ -1,6 +1,7 @@
-const { EmbedBuilder, PermissionsBitField } = require('discord.js');
+const { EmbedBuilder } = require('discord.js');
 const checkPerms = require('../utils/permissions');
 const Warn = require('../models/warnSchema');
+const logger = require('../utils/logger');
 
 module.exports = {
   name: "warn",
@@ -9,6 +10,7 @@ module.exports = {
     if (!checkPerms(message)) return;
 
     const member = message.mentions.members.first();
+
     if (!member) {
       return message.reply({
         embeds: [
@@ -16,13 +18,13 @@ module.exports = {
             .setTitle('<:error:1493997369505743000> Error')
             .setDescription('Please mention a user to warn.')
             .setColor('Red')
+            .setFooter({ text: `Requested by ${message.author.tag}` })
         ]
       });
     }
 
     const reason = args.slice(1).join(" ") || "No reason provided";
 
-    // ================= DATABASE =================
     let data = await Warn.findOne({
       guildId: message.guild.id,
       userId: member.id
@@ -43,54 +45,58 @@ module.exports = {
 
     await data.save();
 
-    const totalWarns = data.warns.length;
+    const total = data.warns.length;
 
-    // ================= BASE EMBED =================
+    // MAIN EMBED
     const embed = new EmbedBuilder()
       .setTitle('<:warning:149399724064486401> Warn Issued')
       .addFields(
         { name: "User", value: `<@${member.id}>`, inline: true },
         { name: "Moderator", value: `<@${message.author.id}>`, inline: true },
         { name: "Reason", value: reason },
-        { name: "Total Warns", value: `${totalWarns}` }
+        { name: "Total Warns", value: `${total}` }
       )
       .setColor('Yellow')
       .setFooter({ text: `Requested by ${message.author.tag}` });
 
     await message.reply({ embeds: [embed] });
 
-    // ================= AUTO PUNISH =================
+    // LOG EMBED
+    const logEmbed = new EmbedBuilder()
+      .setTitle('📜 Warn Log')
+      .addFields(
+        { name: "User", value: `<@${member.id}>`, inline: true },
+        { name: "Moderator", value: `<@${message.author.id}>`, inline: true },
+        { name: "Reason", value: reason }
+      )
+      .setColor('Orange')
+      .setTimestamp();
 
-    // 3 WARNS → TIMEOUT (10 minutes)
-    if (totalWarns === 3) {
-      if (member.moderatable) {
-        await member.timeout(10 * 60 * 1000, "Reached 3 warns");
+    await logger(message, logEmbed);
 
-        message.channel.send({
-          embeds: [
-            new EmbedBuilder()
-              .setTitle('⚠️ Auto Timeout')
-              .setDescription(`<@${member.id}> has been timed out for 10 minutes (3 warns).`)
-              .setColor('Orange')
-          ]
-        });
-      }
+    // AUTO PUNISH
+    if (total === 3 && member.moderatable) {
+      await member.timeout(10 * 60 * 1000, "3 warns");
+
+      const tEmbed = new EmbedBuilder()
+        .setTitle('⚠️ Auto Timeout')
+        .setDescription(`${member} muted for 10 minutes (3 warns)`)
+        .setColor('Orange');
+
+      message.channel.send({ embeds: [tEmbed] });
+      await logger(message, tEmbed);
     }
 
-    // 5 WARNS → BAN
-    if (totalWarns === 5) {
-      if (member.bannable) {
-        await member.ban({ reason: "Reached 5 warns" });
+    if (total === 5 && member.bannable) {
+      await member.ban({ reason: "5 warns" });
 
-        message.channel.send({
-          embeds: [
-            new EmbedBuilder()
-              .setTitle('🔨 Auto Ban')
-              .setDescription(`<@${member.id}> has been banned (5 warns).`)
-              .setColor('Red')
-          ]
-        });
-      }
+      const bEmbed = new EmbedBuilder()
+        .setTitle('🔨 Auto Ban')
+        .setDescription(`${member.user.tag} banned (5 warns)`)
+        .setColor('Red');
+
+      message.channel.send({ embeds: [bEmbed] });
+      await logger(message, bEmbed);
     }
   }
 };
