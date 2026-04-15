@@ -9,6 +9,7 @@ module.exports = {
     if (!checkPerms(message)) return;
 
     const channel = message.mentions.channels.first();
+
     if (!channel) {
       return message.reply({
         embeds: [
@@ -16,6 +17,7 @@ module.exports = {
             .setTitle('<:error:1493997369505743000> Error')
             .setDescription('Please mention a channel.')
             .setColor('Red')
+            .setFooter({ text: `Requested by ${message.author.tag}` })
         ]
       });
     }
@@ -39,6 +41,7 @@ module.exports = {
           .setTitle('✅ Log Channel Set')
           .setDescription(`Logs will be sent to ${channel}`)
           .setColor('Green')
+          .setFooter({ text: `Requested by ${message.author.tag}` })
       ]
     });
   }
