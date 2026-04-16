@@ -1,42 +1,32 @@
 require('dotenv').config();
 
+const fs = require('fs');
+const path = require('path');
 const { Client, GatewayIntentBits, Collection } = require('discord.js');
 const mongoose = require('mongoose');
-const fs = require('fs');
-
-const cooldown = require('./utils/cooldown');
 
 const client = new Client({
-  intents: [
-    GatewayIntentBits.Guilds,
-    GatewayIntentBits.GuildMessages,
-    GatewayIntentBits.MessageContent
-  ]
+  intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent]
 });
 
 client.commands = new Collection();
 const prefix = ".";
 
 // LOAD COMMANDS
-const commandFiles = fs.readdirSync('./commands').filter(file => file.endsWith('.js'));
+const commandFiles = fs.readdirSync('./commands').filter(f => f.endsWith('.js'));
 
 for (const file of commandFiles) {
   const command = require(`./commands/${file}`);
   client.commands.set(command.name, command);
 }
 
-// MONGODB
-mongoose.connect(process.env.MONGO_URI)
-  .then(() => console.log("MongoDB Connected"))
-  .catch(err => console.log(err));
-
 // READY
-client.once('ready', () => {
+client.on('clientReady', () => {
   console.log(`${client.user.tag} is online`);
 });
 
 // MESSAGE HANDLER
-client.on('messageCreate', async message => {
+client.on('messageCreate', async (message) => {
   if (!message.content.startsWith(prefix) || message.author.bot) return;
 
   const args = message.content.slice(prefix.length).trim().split(/ +/);
@@ -45,25 +35,17 @@ client.on('messageCreate', async message => {
   const command = client.commands.get(cmd);
   if (!command) return;
 
-  // COOLDOWN CHECK (default 3s)
-  const cd = cooldown(message, cmd, 3);
-  if (cd) return;
-
   try {
-    command.execute(message, args);
+    command.execute(message, args, client);
   } catch (err) {
     console.error(err);
-
-    message.reply({
-      embeds: [
-        new (require('discord.js').EmbedBuilder)()
-          .setTitle('<:error:1493997369505743000> Error')
-          .setDescription('Something went wrong.')
-          .setColor('Red')
-          .setFooter({ text: `Requested by ${message.author.tag}` })
-      ]
-    });
   }
 });
 
+// MONGO
+mongoose.connect(process.env.MONGO_URI)
+.then(() => console.log("MongoDB Connected"))
+.catch(err => console.log(err));
+
+// LOGIN
 client.login(process.env.TOKEN);
