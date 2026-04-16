@@ -1,31 +1,31 @@
 const { EmbedBuilder } = require('discord.js');
-const emoji = require('./emoji');
 
 module.exports = {
-  success: (message, title, desc) => {
+
+  error: (message, text) => {
     return new EmbedBuilder()
-      .setTitle(`${emoji.success} ${title}`)
-      .setDescription(desc)
-      .setColor('#57F287')
-      .setFooter({ text: `Requested by ${message.author.tag}` })
+      .setColor(0xED4245)
+      .setTitle("<:error:1493997369505743000> Error")
+      .setDescription(text)
+      .setFooter({ text: `Requested by ${message.author.username}` })
       .setTimestamp();
   },
 
-  error: (message, desc) => {
+  success: (message, text) => {
     return new EmbedBuilder()
-      .setTitle(`${emoji.error} Error`)
-      .setDescription(desc)
-      .setColor('#ED4245')
-      .setFooter({ text: `Requested by ${message.author.tag}` })
+      .setColor(0x57F287)
+      .setTitle("<:done:1493997357715423373> Success")
+      .setDescription(text)
+      .setFooter({ text: `Requested by ${message.author.username}` })
       .setTimestamp();
   },
 
-  info: (message, title, desc) => {
+  info: (message, title, text) => {
     return new EmbedBuilder()
-      .setTitle(`${emoji.info} ${title}`)
-      .setDescription(desc)
-      .setColor('#5865F2')
-      .setFooter({ text: `Requested by ${message.author.tag}` })
+      .setColor(0x5865F2)
+      .setTitle(`<:info:1493997375365189813> ${title}`)
+      .setDescription(text)
+      .setFooter({ text: `Requested by ${message.author.username}` })
       .setTimestamp();
   }
 };
