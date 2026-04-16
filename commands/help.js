@@ -13,12 +13,12 @@ module.exports = {
     const base = embed.info(
       message,
       "Help Panel",
-      "Select a category below"
+      "Use dropdown below"
     );
 
-    // ⚠️ USING NORMAL EMOJIS (100% SAFE)
     const menu = new StringSelectMenuBuilder()
       .setCustomId('help_menu')
+      .setPlaceholder('Select category')
       .addOptions([
         {
           label: 'Moderation',
@@ -45,18 +45,21 @@ module.exports = {
 
       if (i.values[0] === 'mod') {
         return i.update({
-          embeds: [embed.info(message, "Moderation", ".warn\n.warns\n.setlog")]
+          embeds: [
+            embed.info(message, "Moderation Commands",
+              "` .warn `\n` .warns `\n` .setlog `")
+          ]
         });
       }
 
       if (i.values[0] === 'util') {
         return i.update({
-          embeds: [embed.info(message, "Utility", ".avatar\n.list")]
+          embeds: [
+            embed.info(message, "Utility Commands",
+              "` .avatar `\n` .list `")
+          ]
         });
       }
-    });
-  }
-};
     });
   }
 };
